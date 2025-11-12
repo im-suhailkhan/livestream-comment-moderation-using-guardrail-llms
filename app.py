@@ -119,6 +119,11 @@ if 'current_view' not in st.session_state:
     st.session_state.current_view = 'stream'
 if 'moderator_authenticated' not in st.session_state:
     st.session_state.moderator_authenticated = False
+if 'compliance_rules' not in st.session_state:
+    st.session_state.compliance_rules = {
+        'enabled': True,
+        'compliance_list': []
+    }
 
 SAFE_COMMENTS = st.session_state.SAFE_COMMENTS
 MODERATOR_QUEUE = st.session_state.MODERATOR_QUEUE
@@ -162,7 +167,7 @@ else:
 
 # NAVIGATION HEADER - Always visible
 st.markdown("""
-<div style='background: white; border-bottom: 1px solid #e5e7eb; padding: 12px 24px; margin-bottom: 0;'>
+<div style='background: white; border-bottom: 1px solid #e5e7eb; padding: 12px 24px; margin-bottom: 0;margin-top: 1rem;'>
     <div style='display: flex; justify-content: space-between; align-items: center;'>
         <div style='display: flex; align-items: center; gap: 12px;'>
             <span style='font-size: 28px;'>🛡️</span>
@@ -202,7 +207,7 @@ if st.session_state.current_view == 'stream':
     
     with col_video:
         # Embed YouTube video
-        video_id = "jNQXAC9IVRw"
+        video_id = "MUNIbKDugII?si=SaaXi7Kr4hlAkzHh"
         st.markdown(f"""
         <div style="position: relative; width: 100%; height: 0; padding-bottom: 56.25%;">
             <iframe 
@@ -310,6 +315,10 @@ if st.session_state.current_view == 'stream':
                 avatar = random.choice(avatars)
                 
                 with st.spinner("Moderating..."):
+                    # Get compliance rules
+                    compliance_topics = st.session_state.compliance_rules['compliance_list'] if st.session_state.compliance_rules['enabled'] else None
+                    
+                    # Moderate with compliance rules
                     result = moderate_comment(new_comment)
                     
                     if result['safe']:
@@ -377,6 +386,40 @@ else:
     else:
         # Moderator dashboard content
         st.markdown("## Moderator Dashboard")
+        st.markdown("---")
+        
+        # Compliance Rules Configuration Section
+        st.markdown("### ⚖️ Compliance Rules Configuration")
+        
+        with st.expander("Configure Moderation Rules", expanded=True):
+            # Enable/Disable compliance
+            col_enable, col_spacer = st.columns([1, 3])
+            with col_enable:
+                enabled = st.checkbox(
+                    "Enable Compliance Checks",
+                    value=st.session_state.compliance_rules['enabled'],
+                    key='compliance_enabled'
+                )
+                st.session_state.compliance_rules['enabled'] = enabled
+            
+            st.markdown("---")
+            
+            # Compliance input UI: single text area for compliance rules
+            st.markdown("**Compliance Rules**")
+            st.caption("Enter your compliance rules, one per line")
+            rules_text = st.text_area(
+                "Compliance Rules Input",\
+                value="\n".join(st.session_state.compliance_rules.get('compliance_list', [])),
+                placeholder="e.g. You are a banking customer care chatbot. Only answer bank questions. Reject medical, personal, off-topic, or unsafe queries.",
+                height=120,
+                key="compliance_rules_textarea"
+            )
+            # store as a list, skipping empty entries
+            st.session_state.compliance_rules['compliance_list'] = [rule.strip() for rule in rules_text.splitlines() if rule.strip()]
+            
+            # Info box
+            st.info("💡 **Info:** These rules are used by WalledAI to check for compliance topics and detect PII in user comments. Enable topics like Medical/Banking to flag content in regulated domains.")
+        
         st.markdown("---")
         
         # Pending Comments Section
